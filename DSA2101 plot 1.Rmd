@@ -1,0 +1,173 @@
+---
+title: "DSA2101 Project"
+author: "Liang Ying Ying"
+date: "2024-07-07"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.align = 'center', echo = TRUE)
+# Load packages
+library(tidytuesdayR)
+library(tidyverse)
+library(ggplot2)
+library(viridis)
+
+# Get the data
+deforestation = tidytuesdayR::tt_load(2021, week = 15)
+forest = deforestation$forest
+forest_area = deforestation$forest_area
+brazil_loss = deforestation$brazil_loss
+soybean_use = deforestation$soybean_use
+vegetable_oil = deforestation$vegetable_oil
+```
+
+### Plot 1
+
+In this plot, we want to see the change in forest area as a percent of global forest area from 2001 to 2013 using the `forest_area` data set. Although deforestation is a global issue, certain countries face this issue with greater severity. We will employ colour mapping on the world map to illustrate which countries require more efforts to address this issue.
+
+We first used the `anti_join()` function to identify countries that have mismatched names from the `world` data. This mismatch will lead to the exclusion of these countries' from the map.
+
+```{r}
+world <- map_data("world")
+
+# Checking for mismatched country names
+forest_map_not_matched <- forest_area %>% 
+  filter(year == 2001 | year == 2013) %>%
+  na.omit() %>% 
+  anti_join(world, by = c("entity" = "region"))  # Many mismatched names
+```
+
+To resolve this issue of the mismatched names, we identified the country names (`entity` column) with multiple countries combined or divided. For simplicity, we divided or added the `forest_area` for each unique country and added it into a new data frame using `bind_rows()`.
+
+```{r}
+antigua_barbuda_area_2001 <- forest_area %>% 
+  filter(year == 2001) %>% 
+  filter(entity == "Antigua and Barbuda") %>%
+  pull(forest_area)
+
+antigua_barbuda_area_2013 <- forest_area %>% 
+  filter(year == 2013) %>% 
+  filter(entity == "Antigua and Barbuda") %>%
+  pull(forest_area)
+
+united_states_virgin_islands_2001 <- forest_area %>% 
+  filter(year == 2001) %>% 
+  filter(entity == "United States Virgin Islands") %>% 
+  pull(forest_area)
+
+united_states_virgin_islands_2013 <- forest_area %>% 
+  filter(year == 2013) %>% 
+  filter(entity == "United States Virgin Islands") %>% 
+  pull(forest_area)
+
+british_virgin_islands_2001 <- forest_area %>% 
+  filter(year == 2001) %>% 
+  filter(entity == "British Virgin Islands") %>% 
+  pull(forest_area)
+
+british_virgin_islands_2013 <- forest_area %>% 
+  filter(year == 2013) %>% 
+  filter(entity == "British Virgin Islands") %>% 
+  pull(forest_area)
+
+saint_vincent_and_grenadines_2001 <- forest_area %>% 
+  filter(year == 2001) %>% 
+  filter(entity == "Saint Vincent and the Grenadines") %>%
+  pull(forest_area)
+
+saint_vincent_and_grenadines_2013 <- forest_area %>% 
+  filter(year == 2013) %>% 
+  filter(entity == "Saint Vincent and the Grenadines") %>%
+  pull(forest_area)
+
+trinidad_and_tobago_2001 <- forest_area %>% 
+  filter(year == 2001) %>% 
+  filter(entity == "Trinidad and Tobago") %>%
+  pull(forest_area)
+
+trinidad_and_tobago_2013 <- forest_area %>% 
+  filter(year == 2013) %>% 
+  filter(entity == "Trinidad and Tobago") %>%
+  pull(forest_area)
+
+saint_kitts_and_nevis_2001 <- forest_area %>% 
+  filter(year == 2001) %>% 
+  filter(entity == "Saint Kitts and Nevis") %>%
+  pull(forest_area)
+
+saint_kitts_and_nevis_2013 <- forest_area %>% 
+  filter(year == 2013) %>% 
+  filter(entity == "Saint Kitts and Nevis") %>%
+  pull(forest_area)
+
+edited_combined_countries <- data.frame(
+  entity = c("Antigua", "Antigua", "Barbuda", "Barbuda", "Virgin Islands", 
+             "Virgin Islands", "Saint Vincent", "Saint Vincent", "Grenadines", 
+             "Grenadines", "Trinidad", "Trinidad", "Tobago", "Tobago", "Saint Kitts", 
+             "Saint Kitts", "Nevis", "Nevis"), 
+  code = c("ANT", "ANT", "BAR", "BAR", "VIR", "VIR", "SVT", "SVT", "GRE", "GRE", "TRI",
+           "TRI", "TOB", "TOB", "SKT", "SKT", "NEV", "NEV"), 
+  year = c(2001, 2013, 2001, 2013, 2001, 2013, 2001, 2013, 2001, 2013, 2001, 2013,
+           2001, 2013, 2001, 2013, 2001, 2013), 
+  forest_area = c(antigua_barbuda_area_2001/2, antigua_barbuda_area_2013/2,
+                  antigua_barbuda_area_2001/2, antigua_barbuda_area_2013/2, 
+                  british_virgin_islands_2001+united_states_virgin_islands_2001, 
+                  british_virgin_islands_2013+united_states_virgin_islands_2013, 
+                  saint_vincent_and_grenadines_2001/2,
+                  saint_vincent_and_grenadines_2013/2, 
+                  saint_vincent_and_grenadines_2001/2, 
+                  saint_vincent_and_grenadines_2013/2, 
+                  trinidad_and_tobago_2001/2, trinidad_and_tobago_2013/2, 
+                  trinidad_and_tobago_2001/2, trinidad_and_tobago_2013/2, 
+                  saint_kitts_and_nevis_2001/2, saint_kitts_and_nevis_2013/2,
+                  saint_kitts_and_nevis_2001/2, saint_kitts_and_nevis_2013/2))
+
+forest_area_edited <- forest_area %>% 
+  filter(!entity %in% c("Antigua and Barbuda", "United States Virgin Islands", 
+                     "British Virgin Islands", "Saint Vincent and the Grenadines", 
+                     "Trinidad and Tobago", "Saint Kitts and Nevis")) %>% 
+  bind_rows(edited_combined_countries)
+```
+
+We proceeded to mutate the `entity` column to deal with the remaining mismatched names. Following, we used the `pivot_wider()` function to transform the dataset from a wide format to a long format to more easily calculate the difference in forest area between 2001 and 2013. We then created a new column using the `mutate()` function to store the calculated forest area change. Lastly, we used the `left_join()` function to match each country to its corresponding change in forest area into a new data frame `forest_map` in preparation to plot the color map.
+
+```{r}
+incorrect_names <- c("United States", "Congo", "Democratic Republic of Congo",
+                     "Czechia", "United Kingdom", "Timor", "Eswatini", "Pitcairn", 
+                     "Sint Maarten (Dutch part)")
+
+correct_names <- c("USA", "Republic of Congo", "Democratic Republic of the Congo",
+                   "Czech Republic", "UK", "Timor-Leste", "Swaziland", 
+                   "Pitcairn Islands", "Saint Martin")
+
+name_mapping <- data.frame(incorrect_names, correct_names)
+
+forest_area_filtered <- forest_area_edited %>% 
+  filter(year == 2001 | year == 2013) %>%
+  na.omit() %>%
+  pivot_wider(names_from = year, values_from = forest_area) %>% 
+  mutate(difference = `2001` - `2013`) %>% 
+  left_join(name_mapping, by = c("entity" = "incorrect_names")) %>%
+  mutate(entity = ifelse(is.na(correct_names), entity, correct_names)) %>%
+  select(-correct_names)
+  
+forest_map_not_matched <- forest_area_filtered %>% 
+  anti_join(world, by = c("entity" = "region"))
+
+brazil <- data.frame(long = -52, lat = -10)
+
+forest_map <- forest_area_filtered %>% 
+  left_join(world, by = c("entity" = "region"), relationship = "many-to-many")
+```
+
+This map effectively shows the audience that Brazil is the country with the highest deforestation area, evident from its dark red colour. For audience who are not as familiar with the World map, `geom_text()` is used to label that area of land as “Brazil”.
+
+```{r fig.cap = "Figure 1.1"}
+ggplot() +
+  geom_polygon(data = forest_map, aes(x = long, y = lat, fill = difference, group = group), color = "black", linewidth = 0.1) +
+  geom_text(data = brazil, aes(x = long, y = lat, label = "Brazil"),
+            color = "white", size = 3, hjust = 0.45, vjust = 0.5, fontface = "bold") +
+  scale_fill_binned(name = "Deforestation Area", low = "green4", high = "red2") +
+  coord_fixed(ratio = 1.3) +
+  theme_void()
+```
